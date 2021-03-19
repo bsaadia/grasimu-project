@@ -1,0 +1,7 @@
+art der akf: (gauss(1),exp(2),mwf-exp(3),anis-exp(4),karman(5)
+method
+korrelationslaenge in gitterpunkten a(,b)
+corr_len
+startzahl fuer zufallszahlengenerator (ganzzahlig und negativ)
+seed
+dimx,dimy

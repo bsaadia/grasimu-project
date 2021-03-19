@@ -147,7 +147,7 @@ class Scene:
 
     def generate_terrain(self, method, x_corr_len, y_corr_len, max_elevation, min_elevation, seed):
         extent = self.scene_properties['datum']
-        with open('PROCESSING/inputFile', 'r') as file:
+        with open('grasimu_project/inputFile', 'r') as file:
             filedata = file.read()
 
         dimx = len(extent[0])
