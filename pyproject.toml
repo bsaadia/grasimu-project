@@ -22,7 +22,7 @@ python-dotenv = "*"
 uWSGI = "^2.0.19"
 dash-bootstrap-components = "^0.11.3"
 scipy = "^1.6.1"
-generate-field = "^0.0.0"
+generate-field = "^0.1.1"
 pyvista = "^0.29.0"
 
 [tool.poetry.dev-dependencies]
