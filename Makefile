@@ -34,7 +34,7 @@ run: env
 
 .PHONY: deploy
 deploy:
-	$(shell . ./deploy.sh)
+	. ./deploy.sh
 
 
 .PHONY: update
