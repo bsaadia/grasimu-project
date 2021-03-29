@@ -6,7 +6,7 @@ GRASIMU is a browser-based tool written in Python and designed for geoscientists
 
 It contains four main components: i) target upload and configuration, ii) terrain generation, iii) survey design, and iv) an interactive visualization dashboard. Throughout each stage, 2D and 3D visualizations are given as results are calculated to allow for near-real-time modifications to parameters.
 
-It is licensed for use under GNU General Public License v3.0. We welcome bug reports, modifications, and improvements to the program.
+It is licensed for use under GNU General Public License v3.0. We welcome bug reports, modifications, and improvements to the program. Comprehensive documentation coming soon.
 
 ### Acknowledgments
 
@@ -33,7 +33,12 @@ Flask "secret keys" are random strings used to encrypt sensitive user data, such
 
 ### Installation
 
-Get up and running with `make deploy`. This will install all of the dependencies. A FORTRAN compiler like gcc is required to use GRASIMU, and must be installed seperately.
+*Note: The following installation instructions have been tested on macOS Big Sur 11.2 (running through Rosetta), Ubuntu 20.04 running in a virtualbox on Windows 10, and a clean install of Fedora32. While all components will work directly on Windows, there is not yet an easy install method.*
+*GRASIMU was designed in Python 3.8 and does not yet work on 3.9 due to dependencies not being released for that version yet. Consider using a package like pyenv to manage your python version within the project's virtual environment.*
+
+A FORTRAN compiler like gcc is required to use GRASIMU, and must be installed separately.
+
+Get up and running with `make deploy`. This will install all of the dependencies. 
 
 ```shell
 $ git clone https://github.com/bsaadia/grasimu-project
