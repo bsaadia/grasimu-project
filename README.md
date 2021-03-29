@@ -1,4 +1,4 @@
-![grasimu-logo](https://github.com/bsaadia/grasimu-project/blob/main/grasimu_project/static/img/logo.png)
+![grasimu-logo](https://github.com/bsaadia/grasimu-project/blob/main/grasimu_project/static/img/smaller.png)
 
 # What is GRASIMU?
 
@@ -19,8 +19,6 @@ The initial version of the program was developed with funding from:
 The authors (Benjamin Saadia, Frank De Veld, and Shona Birkett) also thank Dr. Alexander Braun for his tests and suggestions.
 
 We would also like to thank Madie Page for designing the project logo. It is loosely inspired by Grisù the little dragon from the Italian animated series Grisù di draghetto.
-
-
 
 
 # GRASIMU Instructions
