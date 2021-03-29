@@ -1,3 +1,5 @@
+![grasimu-logo](https://github.com/bsaadia/grasimu-project/blob/main/grasimu_project/static/img/logo.png)
+
 # What is GRASIMU?
 
 Forward modelling of gravity signals is useful for designing an effective survey over a potential target. Given how ubiquitous gravimetry is in mineral exploration, archaeology, and planetary geosciences, there is a need for a fast, open-source tool that can model a 3D target of complex geometry in any terrain environment.
@@ -15,6 +17,10 @@ The initial version of the program was developed with funding from:
 * NSERC Engage
 
 The authors (Benjamin Saadia, Frank De Veld, and Shona Birkett) also thank Dr. Alexander Braun for his tests and suggestions.
+
+We would also like to thank Madie Page for designing the project logo. It is loosely inspired by Grisù the little dragon from the Italian animated series Grisù di draghetto.
+
+
 
 
 # GRASIMU Instructions
