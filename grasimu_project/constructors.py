@@ -55,7 +55,9 @@ class Scene:
                                  points=dict(target=[list(), list(), list()],
                                              full=[list(), list(), list()],
                                              raw=[list(), list(), list()]))
-        self.sim_params = {'Calculation Resolution': None,
+        self.sim_params = {'x position': None,
+                           'y position': None,
+                           'Calculation Resolution': None,
                            'Voxel Resolution': None,
                            'Target Density Contrast': None,
                            'Target Depth': None,
@@ -69,13 +71,22 @@ class Scene:
                            'Gravimeter Error': None,
                            'GPS Error': None}
 
-    def create_datum(self, resolution, extent_multiplier):
-        self.scene_properties['scene_bounds'] = extent_multiplier * self.scene_properties['model_bounds']
-        x = np.arange(self.scene_properties['scene_bounds'][0],
-                      self.scene_properties['scene_bounds'][1],
+    def create_datum(self, resolution, extent_multiplier, extent_x1=None, extent_y1=None, extent_x2=None, extent_y2=None):
+        # ONE DAY INCLUDE OPTION TO AUTO SET EXTENT BASED ON MODEL BOUNDS
+        # self.scene_properties['scene_bounds'] = extent_multiplier * self.scene_properties['model_bounds']
+        # mesh_centre = self.target_geometry['mesh']['centre']
+        # self.scene_properties['scene_bounds'] = mesh_centre[0]
+        # x = np.arange(self.scene_properties['scene_bounds'][0],
+        #               self.scene_properties['scene_bounds'][1],
+        #               resolution)
+        # y = np.arange(self.scene_properties['scene_bounds'][2],
+        #               self.scene_properties['scene_bounds'][3],
+        #               resolution)
+        x = np.arange(extent_x1,
+                      extent_x2,
                       resolution)
-        y = np.arange(self.scene_properties['scene_bounds'][2],
-                      self.scene_properties['scene_bounds'][3],
+        y = np.arange(extent_y1,
+                      extent_y2,
                       resolution)
         if len(x) >= len(y):
             dim = x
@@ -104,7 +115,7 @@ class Scene:
             mesh = pv.Cylinder(radius=radius, height=length)
             mesh = mesh.triangulate()
 
-        mesh.translate(np.array([-1, -1, -1]) * mesh.center)
+        mesh.translate(np.array([-1, -1, -1]) * np.array([mesh.center[0], mesh.center[1], mesh.bounds[5]]))
         mesh.translate(np.array([centre_x, centre_y, centre_depth]))
         faces = mesh.faces
         vertices = mesh.points
@@ -145,41 +156,55 @@ class Scene:
         self.scene_properties['model_bounds'] = np.round(vox.bounds, 0)
         self.sim_params['Voxel Resolution'] = str(resolution) + ' m'
 
-    def generate_terrain(self, method, x_corr_len, y_corr_len, max_elevation, min_elevation, seed):
+    def generate_terrain(self, method, x_corr_len, y_corr_len, max_elevation, min_elevation, seed, path=None):
         extent = self.scene_properties['datum']
-        with open('grasimu_project/inputFile', 'r') as file:
-            filedata = file.read()
+        if method == 6:
+            data_xyz = pd.read_csv(path, names=["x", "y", "z"], delimiter='\s')
+            size = int(np.sqrt(len(data_xyz)))
+            data = np.array(data_xyz['z']).reshape((size, size))
+            self.data['elevation']['terrain'] = [self.scene_properties['datum'][0].ravel(),
+                                                 self.scene_properties['datum'][1].ravel(),
+                                                 np.array(data_xyz['z']),
+                                                 data]  # shouldn't repeat this
+            # self.scene_properties['datum'][0] = np.array(data_xyz['x'])
+            # self.scene_properties['datum'][1] = np.array(data_xyz['y'])
+            print(len(self.scene_properties['datum'][0].ravel()), len(self.scene_properties['datum'][1].ravel()))
+            print(len(np.array(data_xyz['z'])))
 
-        dimx = len(extent[0])
-        dimy = len(extent[1])
+        else:
+            with open('grasimu_project/inputFile', 'r') as file:
+                filedata = file.read()
 
-        filedata = filedata.replace('method', str(method))
-        filedata = filedata.replace('corr_len', str(x_corr_len) + ',' + str(y_corr_len))
+            dimx = len(extent[0])
+            dimy = len(extent[1])
 
-        filedata = filedata.replace('seed', str(seed))
-        filedata = filedata.replace('dimx', str(dimx))
-        filedata = filedata.replace('dimy', str(dimy))
+            filedata = filedata.replace('method', str(method))
+            filedata = filedata.replace('corr_len', str(x_corr_len) + ',' + str(y_corr_len))
 
-        # Write the file out again
-        with open('randinq', 'w') as file:
-            file.write(filedata)
+            filedata = filedata.replace('seed', str(seed))
+            filedata = filedata.replace('dimx', str(dimx))
+            filedata = filedata.replace('dimy', str(dimy))
 
-        mainfunc()  # Generates binary file rando
-        bin2asc()  # converts to a text file
+            # Write the file out again
+            with open('randinq', 'w') as file:
+                file.write(filedata)
 
-        data = pd.read_csv('randout', sep='\s+', names=['X', 'Y', 'Z'])
-        data = np.reshape([data['Z']], (1024, 1024))
-        data = data[0:dimx, 0:dimy]
-        minimum, maximum = np.min(data), np.max(data)
+            mainfunc()  # Generates binary file rando
+            bin2asc()  # converts to a text file
 
-        m = (max_elevation - min_elevation) / (maximum - minimum)
-        b = min_elevation - m * minimum
-        z_true = m * data + b
-        z_flat = z_true.ravel()
-        self.data['elevation']['terrain'] = [self.scene_properties['datum'][0].ravel(),
-                                             self.scene_properties['datum'][1].ravel(),
-                                             z_flat,
-                                             z_true]
+            data = pd.read_csv('randout', sep='\s+', names=['X', 'Y', 'Z'])
+            data = np.reshape([data['Z']], (1024, 1024))
+            data = data[0:dimx, 0:dimy]
+            minimum, maximum = np.min(data), np.max(data)
+
+            m = (max_elevation - min_elevation) / (maximum - minimum)
+            b = min_elevation - m * minimum
+            z_true = m * data + b
+            z_flat = z_true.ravel()
+            self.data['elevation']['terrain'] = [self.scene_properties['datum'][0].ravel(),
+                                                 self.scene_properties['datum'][1].ravel(),
+                                                 z_flat,
+                                                 z_true]  # shouldn't repeat this
 
         self.sim_params['Terrain Seed'] = str(seed)
         self.sim_params['Correlation Length, x'] = str(x_corr_len) + ' m'

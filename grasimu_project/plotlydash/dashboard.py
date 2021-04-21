@@ -279,8 +279,63 @@ def init_dashboard(server):
                         5: '5x',
                     },
                     value=1.5,
+                    disabled=True
                 ),
             ]),
+
+            dbc.Label('Simulation Extent'),
+            dbc.Row([
+                dbc.Col([
+                    dbc.FormGroup([
+                        dbc.InputGroup([
+                            dbc.InputGroupAddon("x1", addon_type="prepend"),
+                            dbc.Input(id='extent_x1_input', type='number', persistence=True,
+                                      disabled=False),
+                        ]),
+
+                    ]),
+
+                ]),
+                dbc.Col([
+                    dbc.FormGroup([
+                        dbc.InputGroup([
+                            dbc.InputGroupAddon("y1", addon_type="prepend"),
+                            dbc.Input(id='extent_y1_input', type='number', persistence=True,
+                                      disabled=False),
+                        ]),
+
+                    ]),
+
+                ]),
+
+            ], form=True),
+
+            dbc.Row([
+                dbc.Col([
+                    dbc.FormGroup([
+                        dbc.InputGroup([
+                            dbc.InputGroupAddon("x2", addon_type="prepend"),
+                            dbc.Input(id='extent_x2_input', type='number', persistence=True,
+                                      disabled=False),
+                        ]),
+
+                    ]),
+
+                ]),
+                dbc.Col([
+                    dbc.FormGroup([
+                        dbc.InputGroup([
+                            dbc.InputGroupAddon("y2", addon_type="prepend"),
+                            dbc.Input(id='extent_y2_input', type='number', persistence=True,
+                                      disabled=False),
+                        ]),
+                        dbc.FormText('If using custom terrain, extent must be equal to terrain dimensions. Cannot '
+                                     'exceed 1024x1024 units.'),
+                    ]),
+
+                ]),
+
+            ], form=True),
 
             dbc.FormGroup([
                 dbc.Button('Calculate Gravity',
@@ -1175,17 +1230,25 @@ def init_dashboard(server):
                        Input('gravity_button', 'n_clicks'),
                        [State('calculation_resolution_input', 'value'),
                         State('density_input', 'value'),
-                        State('calculation_extent', 'value')],
+                        State('calculation_extent', 'value'),
+                        State('extent_x1_input', 'value'),
+                        State('extent_y1_input', 'value'),
+                        State('extent_x2_input', 'value'),
+                        State('extent_y2_input', 'value')],
                        prevent_initial_call=True)
-    def plot_perfect_gravity(click, resolution, density, extent_multiplier):
+    def plot_perfect_gravity(click, resolution, density, extent_multiplier, extent_x1, extent_y1, extent_x2, extent_y2):
         sc.create_datum(resolution=resolution,
-                        extent_multiplier=extent_multiplier)
+                        extent_multiplier=extent_multiplier,
+                        extent_x1=extent_x1, extent_y1=extent_y1,
+                        extent_x2=extent_x2, extent_y2=extent_y2)
         sc.calculate_target_gravity(density_contrast=density, with_terrain=False)
 
         perfect_fig = go.Figure(go.Heatmap(x=sc.data['perfect_gravity']['target'][0],
                                            y=sc.data['perfect_gravity']['target'][1],
                                            z=sc.data['perfect_gravity']['target'][2],
                                            colorbar_title="milligal"))
+        perfect_fig.update_layout(yaxis=dict(scaleanchor='x'),
+                                  xaxis=dict(scaleanchor='y'))
 
         return perfect_fig
 
@@ -1205,14 +1268,20 @@ def init_dashboard(server):
                        prevent_initial_call=True)
     def plot_terrain(click, tab, cmap_dump, seed, corr_x, corr_y, max_in, min_in, path, method):
         ctx = dash.callback_context
-        dem_button_status = True
+        if method == 6:
+            path_status = False
+        else:
+            path_status = True
+
+        dem_button_status = False
         dem_button_text = "No terrain surface in memory."
         if ctx.triggered[0]['prop_id'].split('.')[0] == 'terrain_button':
             sc.generate_terrain(seed=seed,
                                 method=method,
                                 x_corr_len=corr_x,
                                 y_corr_len=corr_y,
-                                max_elevation=max_in, min_elevation=min_in)
+                                max_elevation=max_in, min_elevation=min_in,
+                                path=path)
 
         if click is None and ctx.triggered[0]['prop_id'].split('.')[0] == 'terrain_tabs':
             return None, None, None
@@ -1448,8 +1517,8 @@ def init_dashboard(server):
                                                  opacity=0.2))
             survey_pick_fig.update_scenes(aspectmode='data',
                                           dragmode=False)
-            survey_pick_fig.update_layout(scene_camera=dict(eye=dict(x=0., y=0., z=2),
-                                                            up=dict(x=0., y=2, z=0.)))
+            survey_pick_fig.update_layout(scene_camera=dict(eye=dict(x=0., y=0., z=2)))
+
         except TypeError:
             print("No target or terrain data loaded.")
             return go.Figure(), interp_button_status, interp_button_text
@@ -1530,7 +1599,6 @@ def init_dashboard(server):
     #                    prevent_initial_call=True)
     # def grid_builder(click_data):
 
-
     # comment
     @dash_app.callback([Output('survey_table', 'data'),
                         Output('count_data', 'children')],
@@ -1583,7 +1651,7 @@ def init_dashboard(server):
             corr_y_status = True
             max_status = True
             min_status = True
-            path_status = True
+            path_status = False
         elif selection == 1:
             seed_status = False
             corr_x_status = False
