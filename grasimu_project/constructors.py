@@ -18,7 +18,8 @@ class Scene:
                                      scene_bounds=[],
                                      edge_distance_factor=[],
                                      resolution=[],
-                                     datum=[])
+                                     datum=[],
+                                     length=[])
         self.target_geometry = dict(mesh=dict(indices=[],
                                               vertices=[],
                                               centre=[],
@@ -71,7 +72,9 @@ class Scene:
                            'Gravimeter Error': None,
                            'GPS Error': None}
 
-    def create_datum(self, resolution, extent_multiplier, extent_x1=None, extent_y1=None, extent_x2=None, extent_y2=None):
+    def create_datum(self, resolution, extent_multiplier,
+                     extent_x1=None, extent_y1=None, extent_x2=None, extent_y2=None,
+                     path=None, dem_res=None):
         # ONE DAY INCLUDE OPTION TO AUTO SET EXTENT BASED ON MODEL BOUNDS
         # self.scene_properties['scene_bounds'] = extent_multiplier * self.scene_properties['model_bounds']
         # mesh_centre = self.target_geometry['mesh']['centre']
@@ -82,21 +85,52 @@ class Scene:
         # y = np.arange(self.scene_properties['scene_bounds'][2],
         #               self.scene_properties['scene_bounds'][3],
         #               resolution)
-        x = np.arange(extent_x1,
-                      extent_x2,
-                      resolution)
-        y = np.arange(extent_y1,
-                      extent_y2,
-                      resolution)
-        if len(x) >= len(y):
-            dim = x
-        elif len(x) < len(y):
-            dim = y
-        xx, yy = np.meshgrid(dim, dim)
-        zz = np.zeros_like(xx)
-        self.scene_properties['datum'] = [xx, yy, zz]
+        if path:
+            data_xyz = pd.read_csv(path, names=["x", "y", "z"], delimiter='\s')
+            size = int(np.sqrt(len(data_xyz)))
+            x_min, x_max = np.min(data_xyz['x']), np.max(data_xyz['x'])
+            y_min, y_max = np.min(data_xyz['y']), np.max(data_xyz['y'])
+            x_diff, y_diff = x_max - x_min, y_max - y_min
+
+            x = np.arange(0, x_diff + dem_res, dem_res)
+            y = np.arange(0, y_diff + dem_res, dem_res)
+
+            xx, yy = np.meshgrid(x, y)
+            zz = np.array(data_xyz['z']).reshape((size, size))
+            effective_res = int(resolution/dem_res)
+            xx_sampled = xx[::effective_res, ::effective_res]
+            yy_sampled = yy[::effective_res, ::effective_res]
+            zz_sampled = zz[::effective_res, ::effective_res]
+            # xx = np.array(x).reshape((size, size))
+            # yy = np.array(y).reshape((size, size))
+            self.data['elevation']['terrain'] = [xx_sampled.ravel(),
+                                                 yy_sampled.ravel(),
+                                                 zz_sampled.ravel(),
+                                                 zz_sampled]
+            self.scene_properties['length'] = len(data_xyz)
+
+        else:
+            extent_x2 = extent_x2 + resolution
+            extent_y2 = extent_y2 + resolution
+
+            x = np.arange(extent_x1,
+                          extent_x2,
+                          resolution)
+            y = np.arange(extent_y1,
+                          extent_y2,
+                          resolution)
+            if len(x) >= len(y):
+                dim = x
+            elif len(x) < len(y):
+                dim = y
+            xx_sampled, yy_sampled = np.meshgrid(dim, dim)
+
+        self.scene_properties['scene_bounds'] = [np.min(xx_sampled), np.min(yy_sampled),
+                                                 np.max(xx_sampled), np.max(yy_sampled)]
+        self.scene_properties['datum'] = [xx_sampled, yy_sampled, np.zeros_like(zz_sampled)]
         self.scene_properties['resolution'] = resolution
         self.sim_params['Calculation Resolution'] = str(resolution)
+
 
     def render_mesh(self,
                     centre_depth,
@@ -158,18 +192,21 @@ class Scene:
 
     def generate_terrain(self, method, x_corr_len, y_corr_len, max_elevation, min_elevation, seed, path=None):
         extent = self.scene_properties['datum']
+        resolution = self.scene_properties['resolution']
         if method == 6:
-            data_xyz = pd.read_csv(path, names=["x", "y", "z"], delimiter='\s')
-            size = int(np.sqrt(len(data_xyz)))
-            data = np.array(data_xyz['z']).reshape((size, size))
-            self.data['elevation']['terrain'] = [self.scene_properties['datum'][0].ravel(),
-                                                 self.scene_properties['datum'][1].ravel(),
-                                                 np.array(data_xyz['z']),
-                                                 data]  # shouldn't repeat this
-            # self.scene_properties['datum'][0] = np.array(data_xyz['x'])
-            # self.scene_properties['datum'][1] = np.array(data_xyz['y'])
-            print(len(self.scene_properties['datum'][0].ravel()), len(self.scene_properties['datum'][1].ravel()))
-            print(len(np.array(data_xyz['z'])))
+            # data_xyz = pd.read_csv(path, names=["x", "y", "z"], delimiter='\s')
+            # size = int(np.sqrt(len(data_xyz)))
+            # data = np.array(data_xyz['z']).reshape((size, size))
+            # z_sampled = data[::resolution, ::resolution]
+            # self.data['elevation']['terrain'] = [self.scene_properties['datum'][0].ravel(),
+            #                                      self.scene_properties['datum'][1].ravel(),
+            #                                      z_sampled.ravel(),
+            #                                      z_sampled]  # shouldn't repeat this
+            # # self.scene_properties['datum'][0] = np.array(data_xyz['x'])
+            # # self.scene_properties['datum'][1] = np.array(data_xyz['y'])
+            # print(len(self.scene_properties['datum'][0].ravel()), len(self.scene_properties['datum'][1].ravel()))
+            # print(len(np.array(data_xyz['z'])))
+            print('help')
 
         else:
             with open('grasimu_project/inputFile', 'r') as file:
