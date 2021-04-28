@@ -123,7 +123,8 @@ class Scene:
                 dim = x
             elif len(x) < len(y):
                 dim = y
-            xx_sampled, yy_sampled = np.meshgrid(dim, dim)
+            xx_sampled, yy_sampled = np.meshgrid(x, y)
+            zz_sampled = np.zeros_like(xx_sampled)
 
         self.scene_properties['scene_bounds'] = [np.min(xx_sampled), np.min(yy_sampled),
                                                  np.max(xx_sampled), np.max(yy_sampled)]
@@ -211,9 +212,9 @@ class Scene:
         else:
             with open('grasimu_project/inputFile', 'r') as file:
                 filedata = file.read()
-
-            dimx = len(extent[0])
-            dimy = len(extent[1])
+            shape = extent[0].shape
+            dimx = shape[0]
+            dimy = shape[1]
 
             filedata = filedata.replace('method', str(method))
             filedata = filedata.replace('corr_len', str(x_corr_len) + ',' + str(y_corr_len))
@@ -250,9 +251,10 @@ class Scene:
         self.sim_params['Min Elevation'] = str(min_elevation) + ' m'
 
     def generate_dem(self, err):
-        signal = self.data['elevation']['terrain'][2]
+        signal = self.data['elevation']['terrain'][3]
         error = gaussian_filter(signal, sigma=1)
-        dim = int(np.sqrt(len(signal)))
+        # dim = int(np.sqrt(len(signal)))
+        dim = signal.shape
 
         minimum, maximum = np.min(signal), np.max(signal)
         max_elevation = err
@@ -260,8 +262,10 @@ class Scene:
 
         m = (max_elevation - min_elevation) / (maximum - minimum)
         b = min_elevation - m * minimum
-        z_flat = m * error + b + signal
-        z = z_flat.reshape(dim, dim)
+        # z_flat = m * error + b + signal
+        # z = z_flat.reshape(dim)
+        z = m * error + b + signal
+        z_flat = z.ravel()
 
         self.data['elevation']['dem'] = [self.scene_properties['datum'][0].ravel(),
                                          self.scene_properties['datum'][1].ravel(),
@@ -277,12 +281,14 @@ class Scene:
 
     def calculate_terrain_gravity(self, rho):
         for terrain_type in ['terrain', 'dem']:
-            terrain_height = np.array(self.data['elevation'][terrain_type][2])
-
-            x = self.scene_properties['datum'][0]
-            y = self.scene_properties['datum'][1]
-            dim = np.sqrt(len(terrain_height)).astype(int)
-            terrain_height = terrain_height.reshape(dim, dim)
+            terrain_height = self.data['elevation'][terrain_type][2]
+            dim = self.data['elevation'][terrain_type][2].shape
+            # x = self.scene_properties['datum'][0].ravel()  # added ravel()
+            # y = self.scene_properties['datum'][1].ravel()
+            x = self.data['elevation'][terrain_type][0]
+            y = self.data['elevation'][terrain_type][1]
+            # dim = np.sqrt(len(terrain_height)).astype(int)
+            # terrain_height = terrain_height.reshape(dim, dim)
             #   CONSTANTS
             G = 6.67e-11  # Gravitational constant, m^3*kg^-1*s^-2
             h2 = 0
@@ -293,18 +299,23 @@ class Scene:
 
             #   CALCULATION
             for i in range(len(x)):
-                for j in range(len(y)):
-                    x_dist = x[i, j] - x
-                    y_dist = y[i, j] - y
-                    z_dist = terrain_height[i, j] - terrain_height
+                # for j in range(len(y)):
+                    # x_dist = x[i, j] - x
+                    # y_dist = y[i, j] - y
+                    # z_dist = terrain_height[i, j] - terrain_height
+                x_dist = x[i] - x
+                y_dist = y[i] - y
+                z_dist = terrain_height[i] - terrain_height
 
-                    term1 = np.sqrt((np.square(x_dist) + np.square(y_dist) + np.square(z_dist)))
-                    term2 = np.sqrt((np.square(x_dist) + np.square(y_dist) + np.square(h2)))
-                    del_g = G * rho * del_a * (1 / term2 - 1 / term1)  # Gravitational accl from rectangular prism
-                    del_g[np.isnan(del_g)] = 0  # g cannot be analytically obtained for the point being operated on
-                    total_g = total_g + del_g
-            g = (total_g * 1e5)
-            g_flat = g.ravel()
+                term1 = np.sqrt((np.square(x_dist) + np.square(y_dist) + np.square(z_dist)))
+                term2 = np.sqrt((np.square(x_dist) + np.square(y_dist) + np.square(h2)))
+                del_g = G * rho * del_a * (1 / term2 - 1 / term1)  # Gravitational accl from rectangular prism
+                del_g[np.isnan(del_g)] = 0  # g cannot be analytically obtained for the point being operated on
+                total_g = total_g + del_g
+            # g = (total_g * 1e5)
+            # g_flat = g.ravel()
+            g_flat = (total_g * 1e5)
+            g = g_flat.reshape(dim)
             self.data['perfect_gravity'][terrain_type] = [self.scene_properties['datum'][0].ravel(),
                                                           self.scene_properties['datum'][1].ravel(),
                                                           g_flat,
@@ -328,8 +339,8 @@ class Scene:
             dx2 = x2 - x
             dy1 = y1 - y
             dy2 = y2 - y
-            dz1 = z1 - z
-            dz2 = z2 - z
+            dz1 = z1 + z
+            dz2 = z2 + z
 
             # Define gravitational constant in mGal m^2/kg
             G = (6.67408e-11) * 1e5
@@ -366,7 +377,7 @@ class Scene:
 
         def add_noise(data, noise, seed=1):
             np.random.seed(seed)
-            err = np.random.normal(0, noise / 2, (len(data), len(data)))
+            err = np.random.normal(0, noise / 2, data.shape)
             err_sum = np.round(data + err, 2)
             return err_sum
 
@@ -407,8 +418,8 @@ class Scene:
             g += single_point_gravity
         g = [g, add_noise(g, grav_err)]
 
-        g_val = g[k] + background
-        g_flat = g_val.ravel()
+        g_flat = g[k].ravel() + background
+        g_val = g_flat.reshape(x_loc.shape)
 
         self.data[noise_key][terrain_key] = [self.scene_properties['datum'][0].ravel(),
                                              self.scene_properties['datum'][1].ravel(),
@@ -482,7 +493,7 @@ class Scene:
         else:
             tc = np.zeros_like(self.corrections['terrain'][3])
 
-        correction = fac + tc
+        correction = fac + tc.reshape(fac.shape)
 
         self.data['corrected_gravity']['full'] = [None,
                                                   None,

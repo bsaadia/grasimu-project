@@ -685,26 +685,26 @@ def init_dashboard(server):
                         selected_plot_list[12][3]]
 
         c1_fig = px.imshow(img=np.flipud(data[0]),
-                           x=sc.scene_properties['datum'][0][0],
-                           y=sc.scene_properties['datum'][0][0])
+                           x=sc.scene_properties['datum'][0][0, :],
+                           y=sc.scene_properties['datum'][1][:, 0])
 
         c1_fig.update_layout(coloraxis_colorbar=dict(title='milligal'))
 
         c2_fig = px.imshow(img=np.flipud(data[1]),
-                           x=sc.scene_properties['datum'][0][0],
-                           y=sc.scene_properties['datum'][0][0])
+                           x=sc.scene_properties['datum'][0][0, :],
+                           y=sc.scene_properties['datum'][1][:, 0])
 
         c2_fig.update_layout(coloraxis_colorbar=dict(title='milligal'))
 
         c3_fig = px.imshow(img=np.flipud(data[2]),
-                           x=sc.scene_properties['datum'][0][0],
-                           y=sc.scene_properties['datum'][0][0])
+                           x=sc.scene_properties['datum'][0][0, :],
+                           y=sc.scene_properties['datum'][1][:, 0])
 
         c3_fig.update_layout(coloraxis_colorbar=dict(title='milligal'))
 
         slice_fig = px.imshow(img=np.flipud(selected_plot_list[value][3]),
-                              x=sc.scene_properties['datum'][0][0],
-                              y=sc.scene_properties['datum'][0][0])
+                              x=sc.scene_properties['datum'][0][0, :],
+                              y=sc.scene_properties['datum'][1][:, 0])
         slice_fig.update_xaxes(spikemode='across', showspikes=True)
         slice_fig.update_yaxes(spikemode='across', showspikes=True)
 
@@ -713,12 +713,12 @@ def init_dashboard(server):
             x_pos = click_data[0]
             y_pos = click_data[1]
 
-            x_trace = go.Scatter(x=sc.scene_properties['datum'][0][0],
-                                 y=np.ones_like(sc.scene_properties['datum'][0][0]) * y_pos,
+            x_trace = go.Scatter(x=sc.scene_properties['datum'][0][0, :],
+                                 y=np.ones_like(sc.scene_properties['datum'][0][0, :]) * y_pos,
                                  marker_color='cyan',
                                  name="E-W")
-            y_trace = go.Scatter(x=np.ones_like(sc.scene_properties['datum'][0][0]) * x_pos,
-                                 y=sc.scene_properties['datum'][0][0],
+            y_trace = go.Scatter(x=np.ones_like(sc.scene_properties['datum'][1][0, :]) * x_pos,
+                                 y=sc.scene_properties['datum'][1][:, 0],
                                  marker_color='lightgreen',
                                  name="N-S")
 

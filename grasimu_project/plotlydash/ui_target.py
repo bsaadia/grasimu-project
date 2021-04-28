@@ -204,7 +204,7 @@ extent_opts_card = dbc.Card([
                                     dbc.InputGroup([
                                         dbc.InputGroupAddon(
                                             dbc.Checkbox(
-                                                id="extent_dem_checkbox"
+                                                id="extent_dem_checkbox", persistence=True
                                             ),
                                             addon_type="prepend"
                                         ),
@@ -222,7 +222,7 @@ extent_opts_card = dbc.Card([
                                 dbc.Label("DEM resolution"),
                                 dbc.InputGroup([
                                     dbc.Input(id='extent_dem_resolution',
-                                              type='number'),
+                                              type='number', persistence=True),
                                     dbc.InputGroupAddon('m', addon_type='append')
                                 ])
                             ], width=4),
