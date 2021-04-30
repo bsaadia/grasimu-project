@@ -142,6 +142,31 @@ def init_dashboard(server):
             return False, not is_open2
         return False, False
 
+    @dash_app.callback([Output('calculation_extent', 'disabled'),
+                        Output('extent_dem_path', 'disabled'),
+                        Output('extent_dem_resolution', 'disabled')],
+                       Input('extent_dem_checkbox', 'checked'))
+    def toggle_extent_slider(use_dem):
+        if use_dem:
+            slider_status = True
+            path_status = False
+            res_status = False
+        else:
+            slider_status = False
+            path_status = True
+            res_status = True
+        return slider_status, path_status, res_status
+
+    # @dash_app.callback(Output('target_tab_2', 'disabled'),
+    #                    Input('target_geometry_radio', 'value'))
+    # def toggle_target_tab(use_geom):
+    #     if use_geom is 'sphere':
+    #         tab_status = False
+    #     else:
+    #         tab_status = True
+    #     return tab_status
+
+
     @dash_app.callback(Output('extent_pick_plot', 'figure'),
                        Input('extent_button', 'n_clicks'),
                        [State('calculation_resolution_input', 'value'),
@@ -158,13 +183,20 @@ def init_dashboard(server):
     def plot_extent(click, resolution, extent_multiplier, extent_x1, extent_y1, extent_x2, extent_y2,
                     auto_is_open, use_dem, path, dem_res):
         ctx = dash.callback_context
+
         if auto_is_open:
             if use_dem:
                 use_path = path
+                extent_multiplier = None
                 # resolution currently needs to be an integer
-
+            else:
+                use_path = None
+                dem_res = None
         else:
             use_path = None
+            dem_res = None
+            extent_multiplier = None
+
 
         sc.create_datum(resolution=resolution,
                         extent_multiplier=extent_multiplier,
@@ -197,16 +229,32 @@ def init_dashboard(server):
         return extent_fig
 
     @dash_app.callback(Output('target_grav_plot', 'figure'),
-                       Input('gravity_button', 'n_clicks'),
+                       [Input('gravity_button', 'n_clicks'),
+                        Input('target_tabs', 'active_tab')],
                        [State('density_input', 'value')],
                        prevent_initial_call=True)
-    def plot_perfect_gravity(click, density):
-        sc.calculate_target_gravity(density_contrast=density, with_terrain=False)
+    def plot_perfect_gravity(click, tab, density):
+        ctx = dash.callback_context
 
-        perfect_fig = go.Figure(go.Heatmap(x=sc.data['perfect_gravity']['target'][0],
-                                           y=sc.data['perfect_gravity']['target'][1],
-                                           z=sc.data['perfect_gravity']['target'][2],
-                                           colorbar_title="milligal"))
+        if click is None and ctx.triggered[0]['prop_id'].split('.')[0] == 'target_tabs':
+            return None
+        elif ctx.triggered[0]['prop_id'].split('.')[0] == 'gravity_button':
+            sc.calculate_target_gravity(density_contrast=density, with_terrain=False)
+            sc.calculate_analytical_sphere(rho=density)
+        num_attrs = dict(x=sc.data['perfect_gravity']['target'][0],
+                         y=sc.data['perfect_gravity']['target'][1],
+                         z=sc.data['perfect_gravity']['target'][2],
+                         colorbar_title="milligals")
+        ana_attrs = dict(x=sc.data['perfect_gravity']['ana'][0],
+                         y=sc.data['perfect_gravity']['ana'][1],
+                         z=sc.data['perfect_gravity']['ana'][2],
+                         colorbar_title="milligals")
+        if tab == 'target_tab_2':
+            fig_data = go.Heatmap(ana_attrs)
+        elif tab == 'target_tab_1':
+            fig_data = go.Heatmap(num_attrs)
+
+        perfect_fig = go.Figure(fig_data)
         perfect_fig.update_layout(yaxis=dict(scaleanchor='x'),
                                   xaxis=dict(scaleanchor='y'))
 
@@ -583,19 +631,23 @@ def init_dashboard(server):
     # Target Geometry active/inactive fields callback
     @dash_app.callback([Output('radius_comp_input', 'disabled'),
                         Output('length_comp_input', 'disabled'),
-                        Output('target_upload_path', 'disabled')],
+                        Output('target_upload_path', 'disabled'),
+                        Output('tt2', 'disabled')],
                        Input('target_geometry_radio', 'value'),
                        prevent_initial_call=False)
     def geom_field_status(selection):
         status = [True, True, True, True]
         if selection == 'sphere':
             status[0] = False
+            tab_status = False
         elif selection == 'cylinder':
             status[0] = False
             status[1] = False
+            tab_status = True
         elif selection == 'custom':
             status[2] = False
-        return status[0], status[1], status[2]
+            tab_status = True
+        return status[0], status[1], status[2], tab_status
 
     # Terrain active/inactive fields callback
     @dash_app.callback([Output('seed_input', 'disabled'),

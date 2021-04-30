@@ -23,6 +23,7 @@ class Scene:
         self.target_geometry = dict(mesh=dict(indices=[],
                                               vertices=[],
                                               centre=[],
+                                              radius=None,
                                               pv_model=None),
                                     voxel=dict(indices=[],
                                                vertices=[],
@@ -42,7 +43,8 @@ class Scene:
         self.data = dict(perfect_gravity=dict(terrain=None,
                                               dem=None,
                                               target=None,
-                                              full=None),
+                                              full=None,
+                                              ana=None),
                          noisy_gravity=dict(target=None,
                                             full=None),
                          interp_gravity=dict(target=None,
@@ -72,20 +74,10 @@ class Scene:
                            'Gravimeter Error': None,
                            'GPS Error': None}
 
-    def create_datum(self, resolution, extent_multiplier,
+    def create_datum(self, resolution, extent_multiplier=None,
                      extent_x1=None, extent_y1=None, extent_x2=None, extent_y2=None,
                      path=None, dem_res=None):
-        # ONE DAY INCLUDE OPTION TO AUTO SET EXTENT BASED ON MODEL BOUNDS
-        # self.scene_properties['scene_bounds'] = extent_multiplier * self.scene_properties['model_bounds']
-        # mesh_centre = self.target_geometry['mesh']['centre']
-        # self.scene_properties['scene_bounds'] = mesh_centre[0]
-        # x = np.arange(self.scene_properties['scene_bounds'][0],
-        #               self.scene_properties['scene_bounds'][1],
-        #               resolution)
-        # y = np.arange(self.scene_properties['scene_bounds'][2],
-        #               self.scene_properties['scene_bounds'][3],
-        #               resolution)
-        if path:
+        if path and dem_res:
             data_xyz = pd.read_csv(path, names=["x", "y", "z"], delimiter='\s')
             size = int(np.sqrt(len(data_xyz)))
             x_min, x_max = np.min(data_xyz['x']), np.max(data_xyz['x'])
@@ -97,18 +89,30 @@ class Scene:
 
             xx, yy = np.meshgrid(x, y)
             zz = np.array(data_xyz['z']).reshape((size, size))
-            effective_res = int(resolution/dem_res)
+            effective_res = int(resolution / dem_res)
             xx_sampled = xx[::effective_res, ::effective_res]
             yy_sampled = yy[::effective_res, ::effective_res]
             zz_sampled = zz[::effective_res, ::effective_res]
-            # xx = np.array(x).reshape((size, size))
-            # yy = np.array(y).reshape((size, size))
+
             self.data['elevation']['terrain'] = [xx_sampled.ravel(),
                                                  yy_sampled.ravel(),
                                                  zz_sampled.ravel(),
                                                  zz_sampled]
             self.scene_properties['length'] = len(data_xyz)
-
+        elif extent_multiplier:
+            bounds = extent_multiplier * self.scene_properties['model_bounds']
+            x = np.arange(bounds[0],
+                          bounds[1],
+                          resolution)
+            y = np.arange(bounds[2],
+                          bounds[3],
+                          resolution)
+            if len(x) >= len(y):
+                dim = x
+            elif len(x) < len(y):
+                dim = y
+            xx_sampled, yy_sampled = np.meshgrid(x, y)
+            zz_sampled = np.zeros_like(xx_sampled)
         else:
             extent_x2 = extent_x2 + resolution
             extent_y2 = extent_y2 + resolution
@@ -119,10 +123,6 @@ class Scene:
             y = np.arange(extent_y1,
                           extent_y2,
                           resolution)
-            if len(x) >= len(y):
-                dim = x
-            elif len(x) < len(y):
-                dim = y
             xx_sampled, yy_sampled = np.meshgrid(x, y)
             zz_sampled = np.zeros_like(xx_sampled)
 
@@ -131,7 +131,6 @@ class Scene:
         self.scene_properties['datum'] = [xx_sampled, yy_sampled, np.zeros_like(zz_sampled)]
         self.scene_properties['resolution'] = resolution
         self.sim_params['Calculation Resolution'] = str(resolution)
-
 
     def render_mesh(self,
                     centre_depth,
@@ -146,6 +145,7 @@ class Scene:
             mesh = pv.read(path)
         elif shape == 'sphere':
             mesh = pv.Sphere(radius=radius)
+            self.target_geometry['mesh']['radius'] = radius
         elif shape == 'cylinder':
             mesh = pv.Cylinder(radius=radius, height=length)
             mesh = mesh.triangulate()
@@ -159,6 +159,8 @@ class Scene:
         self.target_geometry['mesh']['indices'] = indices
         self.target_geometry['mesh']['vertices'] = vertices
         self.target_geometry['mesh']['pv_model'] = mesh
+        self.target_geometry['mesh']['centre'] = mesh.center
+
         self.sim_params['Target Depth'] = str(centre_depth) + ' m'
 
     def voxelize_mesh(self, resolution):
@@ -300,9 +302,9 @@ class Scene:
             #   CALCULATION
             for i in range(len(x)):
                 # for j in range(len(y)):
-                    # x_dist = x[i, j] - x
-                    # y_dist = y[i, j] - y
-                    # z_dist = terrain_height[i, j] - terrain_height
+                # x_dist = x[i, j] - x
+                # y_dist = y[i, j] - y
+                # z_dist = terrain_height[i, j] - terrain_height
                 x_dist = x[i] - x
                 y_dist = y[i] - y
                 z_dist = terrain_height[i] - terrain_height
@@ -325,6 +327,47 @@ class Scene:
                                        -self.data['perfect_gravity']['dem'][2],
                                        -self.data['perfect_gravity']['dem'][3]]
         self.sim_params['Background/Terrain Density'] = str(rho) + 'kg/m^3'
+
+    def calculate_analytical_sphere(self, rho):
+        """
+        Generates a gravimetry reading in milligals for each (x,y,z) pair,
+        assuming the anomalous spherical mass has a density rho and is positioned
+        at (x0,y0,z0).
+        """
+        x = self.scene_properties['datum'][0].ravel()
+        y = self.scene_properties['datum'][1].ravel()
+        z = self.scene_properties['datum'][2].ravel()
+
+        x0 = self.target_geometry['mesh']['centre'][0]
+        y0 = self.target_geometry['mesh']['centre'][1]
+        z0 = self.target_geometry['mesh']['centre'][2]
+
+        radius = self.target_geometry['mesh']['radius']
+
+        #   CONSTANTS
+        G = 6.67e-11  # Gravitational constant, m^3*kg^-1*s^-2
+        Pi = 3.14159
+
+        #   PHYSICAL PROPERTIES
+        v = (4 / 3) * Pi * (radius ** 3)  # Volume of a sphere, m^3
+        m = rho * v  # Mass of the sphere, kg
+
+        #   POSITION
+        x_dist = x - x0
+        y_dist = y - y0
+        z_dist = z - z0
+
+        # Distance magnitude, m
+        r = np.sqrt(np.square(x_dist) + np.square(y_dist) + np.square(z_dist))
+
+        #   GRAVITY
+        g = G * m / (r ** 2)  # Gravitational acceleration, ms^-2
+        g_flat = g * 1e5  # Gravitational acceleration, milligal
+        g = g_flat.reshape(self.scene_properties['datum'][0].shape)
+        self.data['perfect_gravity']['ana'] = [self.scene_properties['datum'][0].ravel(),
+                                               self.scene_properties['datum'][1].ravel(),
+                                               g_flat,
+                                               g]
 
     def calculate_target_gravity(self, density_contrast, with_terrain=False, with_noise=False, grav_err=0, gps_err=0):
         def single_voxel_gravity(drho, x_cen, y_cen, z_cen, spacing, x, y, z):

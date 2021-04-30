@@ -194,7 +194,7 @@ extent_opts_card = dbc.Card([
                                     5: '5x',
                                 },
                                 value=1.5,
-                                disabled=True
+                                disabled=False
                             ),
                         ]),
                         dbc.Row([
@@ -329,14 +329,24 @@ extent_opts_card = dbc.Card([
 
 target_grav_plot_card = dbc.Card(
     [
-        dbc.CardHeader("Gravity at Surface (z=0)"),
+        dbc.CardHeader([
+            dbc.Tabs([
+                dbc.Tab(label="Numerical Solution", tab_id="target_tab_1"),
+                dbc.Tab(label="Analytical Solution", tab_id="target_tab_2", id='tt2')
+            ], id='target_tabs', card=True, active_tab='target_tab_1'),
+        ]),
         dbc.CardBody(
             [
-                dcc.Graph(id='target_grav_plot')
+                dbc.Col([
+                    dbc.Label("Gravity at Surface (z=0)"),
+                    dcc.Graph(id='target_grav_plot'),
+
+                ])
             ]
         )
     ]
 )
+
 
 target_grav_opts_card = dbc.Card([
     dbc.CardHeader(" "),
