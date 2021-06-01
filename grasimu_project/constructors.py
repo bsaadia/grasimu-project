@@ -88,7 +88,7 @@ class Scene:
             y = np.arange(0, y_diff + dem_res, dem_res)
 
             xx, yy = np.meshgrid(x, y)
-            zz = np.array(data_xyz['z']).reshape((size, size))
+            zz = np.array(data_xyz['z']).reshape((int((y_diff+dem_res)/dem_res), int((x_diff+dem_res)/dem_res)))
             effective_res = int(resolution / dem_res)
             xx_sampled = xx[::effective_res, ::effective_res]
             yy_sampled = yy[::effective_res, ::effective_res]

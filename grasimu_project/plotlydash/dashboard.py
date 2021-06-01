@@ -166,7 +166,6 @@ def init_dashboard(server):
     #         tab_status = True
     #     return tab_status
 
-
     @dash_app.callback(Output('extent_pick_plot', 'figure'),
                        Input('extent_button', 'n_clicks'),
                        [State('calculation_resolution_input', 'value'),
@@ -197,7 +196,6 @@ def init_dashboard(server):
             dem_res = None
             extent_multiplier = None
 
-
         sc.create_datum(resolution=resolution,
                         extent_multiplier=extent_multiplier,
                         extent_x1=extent_x1, extent_y1=extent_y1,
@@ -207,23 +205,29 @@ def init_dashboard(server):
         y = np.arange(sc.scene_properties['scene_bounds'][1], sc.scene_properties['scene_bounds'][3] + 1)
         xx, yy = np.meshgrid(x, y)
         z = np.ones_like(xx) * 0.3
-        z[::2, ::2] = 0.2
-        z[1::2, 1::2] = 0.4
+        # z[::2, ::2] = 0.2
+        # z[1::2, 1::2] = 0.4
 
         # z = sc.data['elevation']['terrain'][3]
 
         x_vals = sc.scene_properties['datum'][0].ravel()
         y_vals = sc.scene_properties['datum'][1].ravel()
 
-        extent_fig = go.Figure(go.Heatmap(x=xx.ravel(),
-                                          y=yy.ravel(),
-                                          z=z.ravel(),
-                                          zmax=1, zmin=0, colorscale='Greys',
-                                          showscale=False))
-        extent_fig.add_trace(go.Scatter(x=x_vals,
+        extent_fig = go.Figure(go.Scatter(x=x_vals,
                                         y=y_vals, mode='markers',
                                         marker_color='blue', showlegend=True,
                                         marker_size=3, name='Station'))
+        extent_fig.add_shape(type="rect",
+                             x0=sc.scene_properties['scene_bounds'][0],
+                             y0=sc.scene_properties['scene_bounds'][1],
+                             x1=sc.scene_properties['scene_bounds'][2],
+                             y1=sc.scene_properties['scene_bounds'][3],
+                             line=dict(
+                                 color="RoyalBlue",
+                                 width=1),
+                             )
+        # extent_fig.add_trace()
+
         extent_fig.update_layout(yaxis=dict(scaleanchor='x'),
                                  xaxis=dict(scaleanchor='y'))
         return extent_fig
