@@ -99,7 +99,8 @@ mesh_opts_card = dbc.Card([
                 dbc.Input(id='target_upload_path',
                           placeholder="e.g., /home/user/mesh_files/mesh.stl",
                           type="text",
-                          disabled=True),
+                          disabled=True,
+                          persistence=True),
                 dbc.FormText("Filename must include .stl"),
             ]),
             dbc.FormGroup([

@@ -23,7 +23,7 @@ class Scene:
         self.target_geometry = dict(mesh=dict(indices=[],
                                               vertices=[],
                                               centre=[],
-                                              radius=None,
+                                              radius=1,
                                               pv_model=None),
                                     voxel=dict(indices=[],
                                                vertices=[],

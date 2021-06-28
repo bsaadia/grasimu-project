@@ -530,8 +530,9 @@ def init_dashboard(server):
                                                  showscale=False,
                                                  opacity=0.2))
             survey_pick_fig.update_scenes(aspectmode='data',
-                                          dragmode=False)
-            survey_pick_fig.update_layout(scene_camera=dict(eye=dict(x=0., y=0., z=2)))
+                                          dragmode='zoom')
+            survey_pick_fig.update_layout(scene_camera=dict(eye=dict(x=0., y=0., z=2),
+                                                            up=dict(x=0., y=2.5, z=0.)))
 
         except TypeError:
             print("No target or terrain data loaded.")
