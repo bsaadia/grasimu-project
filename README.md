@@ -35,8 +35,37 @@ Flask "secret keys" are random strings used to encrypt sensitive user data, such
 
 *Remember never to commit secrets saved in .env files to Github.*
 
-### Installation
+### Easy Installation
+The easiest way to install GRASIMU is to build it with Docker. First, download and install [Docker](https://docs.docker.com/get-docker/).
 
+Next, run the following commands in your terminal:
+```shell
+$ git clone https://github.com/bsaadia/grasimu-project
+$ cd grasimu-project
+``` 
+Place your data in:
+```shell
+$ grasimu-project/data
+```
+before building the docker image.
+
+To build, run
+```shell
+$ docker compose up --build
+```
+
+### Run GRASIMU
+
+To run the applet after installing, simply type:
+
+```shell
+$ docker compose up
+``` 
+
+and then navigate to the server link that the application is running on (for example, http://0.0.0.0:5000/).
+
+
+### Manual Installation (w/o Docker)
 *Note: The following installation instructions have been tested on macOS Big Sur 11.2 (running through Rosetta), Ubuntu 20.04 running in a virtualbox on Windows 10, and a clean install of Fedora32. While all components will work directly on Windows, there is not yet an easy install method.*
 *GRASIMU was designed in Python 3.8 and does not yet work on 3.9 due to dependencies not being released for that version yet. Consider using a package like pyenv to manage your python version within the project's virtual environment.*
 
@@ -49,15 +78,6 @@ $ git clone https://github.com/bsaadia/grasimu-project
 $ cd grasimu-project
 $ make deploy
 ``` 
-
-## Run GRASIMU
-
-To run the applet after this initial install, simply type:
-
-```shell
-$ make run
-``` 
-
 
 ## Disclaimer
 
